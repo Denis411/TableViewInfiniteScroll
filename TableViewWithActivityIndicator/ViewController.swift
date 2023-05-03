@@ -6,6 +6,23 @@
 //
 
 import UIKit
+final class DataFatcher {
+    private(set) var isBeingLoaded = false
+    private var iteration = 1
+    
+    func fetchData(completionHandler: @escaping ([String]) -> Void) {
+        isBeingLoaded = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+            let array = Array(1...10).map { cellNum in
+                "intration: \(self!.iteration): cell: \(cellNum)"
+            }
+            
+            completionHandler(array)
+            self?.isBeingLoaded = false
+            self?.iteration += 1
+        }
+    }
+}
 final class Cell: UITableViewCell {
     static let reusableCell = "Cell"
     private let label = UILabel()
@@ -27,6 +44,7 @@ final class Cell: UITableViewCell {
 }
 
 class ViewController: UIViewController {
+    private let fetcher = DataFatcher()
     private let tableView = UITableView()
     private let footer: UIView = {
         let footerRect = CGRect(
@@ -43,6 +61,12 @@ class ViewController: UIViewController {
         footer.backgroundColor = .green
         return footer
     }()
+    
+    private var arrayOfTitles = ["Initial"] {
+        didSet {
+            tableView.reloadData()
+        }
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -62,7 +86,7 @@ class ViewController: UIViewController {
 
 extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        20
+        arrayOfTitles.count
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
@@ -71,7 +95,7 @@ extension ViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: Cell.reusableCell, for: indexPath) as! Cell
-        cell.setText("Some text")
+        cell.setText(arrayOfTitles[indexPath.row])
         return cell
     }
 }
@@ -81,10 +105,20 @@ extension ViewController: UITableViewDelegate {
         let bottomPosition = scrollView.contentSize.height - scrollView.bounds.size.height
         
         if scrollView.contentOffset.y > bottomPosition {
-            tableView.tableFooterView = footer
-            print("Footer")
+            if fetcher.isBeingLoaded == true {
+                tableView.tableFooterView = footer
+                print("Footer")
+            } else {
+                fetcher.fetchData { [weak self] newArrayOfTitles in
+                    self?.arrayOfTitles += newArrayOfTitles
+                }
+            }
         } else {
-            tableView.tableFooterView = nil
+            if fetcher.isBeingLoaded == true {
+                return
+            } else {
+                tableView.tableFooterView = nil
+            }
         }
     }
 }
