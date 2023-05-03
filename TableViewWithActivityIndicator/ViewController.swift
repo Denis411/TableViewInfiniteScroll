@@ -14,7 +14,7 @@ final class DataFatcher {
         isBeingLoaded = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
             let array = Array(1...10).map { cellNum in
-                "intration: \(self!.iteration): cell: \(cellNum)"
+                "iteration: \(self!.iteration): cell: \(cellNum)"
             }
             
             completionHandler(array)
@@ -62,7 +62,7 @@ class ViewController: UIViewController {
         return footer
     }()
     
-    private var arrayOfTitles = ["Initial"] {
+    private var arrayOfSections = [["Initial"]] {
         didSet {
             tableView.reloadData()
         }
@@ -86,38 +86,40 @@ class ViewController: UIViewController {
 
 extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        arrayOfTitles.count
+        arrayOfSections[section].count
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         50
     }
     
+    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        "Section number: \(section)"
+    }
+    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: Cell.reusableCell, for: indexPath) as! Cell
-        cell.setText(arrayOfTitles[indexPath.row])
+        cell.setText(arrayOfSections[indexPath.section][indexPath.row])
         return cell
     }
 }
 
 extension ViewController: UITableViewDelegate {
+    func numberOfSections(in tableView: UITableView) -> Int {
+        arrayOfSections.count
+    }
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let bottomPosition = scrollView.contentSize.height - scrollView.bounds.size.height
         
         if scrollView.contentOffset.y > bottomPosition {
             if fetcher.isBeingLoaded == true {
                 tableView.tableFooterView = footer
-                print("Footer")
             } else {
                 fetcher.fetchData { [weak self] newArrayOfTitles in
-                    self?.arrayOfTitles += newArrayOfTitles
+                    self?.arrayOfSections.append(newArrayOfTitles)
+                    self?.tableView.tableFooterView = nil
                 }
-            }
-        } else {
-            if fetcher.isBeingLoaded == true {
-                return
-            } else {
-                tableView.tableFooterView = nil
             }
         }
     }
